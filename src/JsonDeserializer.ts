@@ -285,7 +285,7 @@ function chooseStateMachine (char: string): JsonValueParser|null {
 }
 
 /**
- * Parses a JSON string (in the form of a buffer) as a JS object.
+ * Parses a JSON string (or utf8 buffer) as a JS object.
  */
 export default class JsonDeserializer extends Duplex {
 	// we only need to store one state machine. if the provided thing is an object the object state machine will simply
@@ -318,10 +318,7 @@ export default class JsonDeserializer extends Duplex {
 	_read () {
 		this.canPush = true
 		if (this.resultRead) this.canPush = this.push(null)
-		else if (this.result) {
-			this.resultRead = true
-			this.canPush = this.push(this.result) && this.push(null)
-		}
+		else if (this.result) this.canPush = (this.resultRead = true) && this.push(this.result) && this.push(null)
 	}
 
 	/**
@@ -333,7 +330,7 @@ export default class JsonDeserializer extends Duplex {
 			const { done, value } = this.stateMachine.next(' ')
 			if (done) {
 				this.result = (value as ReadResult).result
-				this.canPush = this.canPush && this.push(this.result) && this.push(null) && (this.resultRead = true)
+				this.canPush = this.canPush && (this.resultRead = true) && this.push(this.result) && this.push(null)
 			}
 		}
 		callback()
@@ -356,7 +353,7 @@ export default class JsonDeserializer extends Duplex {
 		// If the value has successfully been parsed push it or save it for later if it cant be pushed yet
 		if (done) {
 			this.result = (value as ReadResult).result
-			this.canPush = this.canPush && this.push(this.result) && this.push(null) && (this.resultRead = true)
+			this.canPush = this.canPush && (this.resultRead = true) && this.push(this.result) && this.push(null)
 			this.end()
 		}
 		callback()
@@ -370,4 +367,4 @@ j.pipe(new Writable({
 		console.log(chunk)
 	}
 }))
-j.end('{"hello":[123, "321"]}')
+j.end('{ "hello" :[ 123 , "321" ] }')
