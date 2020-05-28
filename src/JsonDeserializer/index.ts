@@ -27,8 +27,7 @@ export default class JsonDeserializer extends Duplex {
 	// use other state machines to read the other stuff
 	private stateMachine: JsonValueParser|null = null
 	private canPush = false
-	private result: any
-	private resultRead = false
+	private results: JsonValue[] = []
 
 	constructor () {
 		super({ readableObjectMode: true })
@@ -48,26 +47,21 @@ export default class JsonDeserializer extends Duplex {
 		return chunk
 	}
 
-	_read () {
+	/**
+	 * If there is a result, provide it and then delete the result again
+	 */
+	_read (): void {
 		this.canPush = true
-		if (this.resultRead) this.canPush = this.push(null)
-		else if (this.result) this.canPush = (this.resultRead = true) && this.push(this.result) && this.push(null)
+		this.pushResults()
 	}
 
 	/**
-	 * Before closing give the state machine another ' ' to indicate that the end has been reached. This is needed for
-	 * individual numbers as they only end once a non-number is supplied (e.g. a whitespace)
+	 * Pushes results while able to.
 	 */
-	_final (callback: (error?: (Error | null)) => void) {
-		if (!this.resultRead && this.stateMachine) {
-			const { done, value } = this.stateMachine.next(' ') as { done: boolean, value: ReadResult }
-			if (done) {
-				this.result = value.result
-				this.canPush = this.canPush && (this.resultRead = true) && this.push(this.result) && this.push(null)
-			}
+	private pushResults (): void {
+		while (this.canPush && this.results.length) {
+			this.canPush = this.push(this.results.shift())
 		}
-		if (this.result === undefined) callback(new Error('Invalid JSON - are all strings/arrays/objects closed?'))
-		else callback()
 	}
 
 	_write (chunk: Buffer, encoding: BufferEncoding, callback: (error?: (Error | null)) => void): void {
@@ -83,10 +77,11 @@ export default class JsonDeserializer extends Duplex {
 		const { done, value } = this.stateMachine.next(str) as { done: boolean, value: ReadResult }
 		// If the value has successfully been parsed push it or save it for later if it cant be pushed yet
 		if (done) {
-			this.result = value.result
-			this.canPush = this.canPush && (this.resultRead = true) && this.push(this.result) && this.push(null)
-			this.end()
-		}
-		callback()
+			this.results.push(value.result)
+			this.pushResults()
+			this.stateMachine = null
+			if (value.rest) this._write(Buffer.from(value.rest, 'utf8'), 'utf8', callback)
+			else callback()
+		} else callback()
 	}
 }
