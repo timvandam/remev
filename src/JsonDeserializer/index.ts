@@ -1,7 +1,5 @@
-import { Duplex, Writable } from 'stream'
+import { Duplex } from 'stream'
 import { ValueOpeners } from './ValueOpeners'
-
-// TODO: Throw an error if everything has been written but there's no output
 
 export type JsonValue = string | number | object | JsonValue[];
 
