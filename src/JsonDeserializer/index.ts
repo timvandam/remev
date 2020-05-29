@@ -1,7 +1,11 @@
 import { Duplex } from 'stream'
 import { ValueOpeners } from './ValueOpeners'
 
-export type JsonValue = string | number | object | JsonValue[];
+interface JsonObject {
+	[key: string]: JsonValue;
+}
+
+export type JsonValue = string | number | JsonObject | JsonValue[];
 
 export interface ReadResult {
 	result: JsonValue;
