@@ -9,7 +9,7 @@ import { JsonValue } from './JsonDeserializer'
 export default class RemoteEventEmitter extends EventEmitter {
 	private static EMIT = Symbol('ree_emit') // used to emit to REEs connected to this REE
 
-	private sockets: net.Socket[] = [] // our sockets that are connected to other REEs
+	private sockets = new Set<net.Socket>() // our sockets that are connected to other REEs
 	private server?: net.Server // our server that allows other REEs to connect
 
 	/**
@@ -32,7 +32,7 @@ export default class RemoteEventEmitter extends EventEmitter {
 	emit (event: string | symbol, ...args: JsonValue[]): boolean {
 		// Send event to all REEs this REE is connected to
 		const buf = RemoteEventEmitter.eventToBuffer(event, ...args)
-		this.sockets.forEach(socket => socket.write(buf)) // TODO: Make this work
+		this.sockets.forEach(socket => socket.write(buf))
 
 		// Send event to all REEs connected to this REE
 		super.emit(RemoteEventEmitter.EMIT, buf)
@@ -46,7 +46,11 @@ export default class RemoteEventEmitter extends EventEmitter {
 	connect (host: string, port: number = 13567): net.Socket {
 		const socket = net.createConnection(port, host)
 		EventDeserializer(socket, this) // read events and emit them
-		this.sockets.push(socket) // TODO: Remove on close
+
+		// Add socket to the socket list, remove if it disconnects
+		this.sockets.add(socket)
+		socket.on('close', () => this.sockets.delete(socket))
+
 		return socket
 	}
 
