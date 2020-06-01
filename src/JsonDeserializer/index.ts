@@ -5,7 +5,7 @@ interface JsonObject {
 	[key: string]: JsonValue;
 }
 
-export type JsonValue = string | number | JsonObject | JsonValue[];
+export type JsonValue = boolean | string | number | JsonObject | JsonValue[];
 
 export interface ReadResult {
 	result: JsonValue;
@@ -17,7 +17,7 @@ export type JsonValueParser = Generator<void, ReadResult, string>
 /**
  * Initializes a state machine for the given character
  */
-export function chooseStateMachine (char: string): JsonValueParser|null {
+export function chooseStateMachine (char: string): JsonValueParser | null {
 	const stateMachine = ValueOpeners[char]?.() ?? null
 	if (stateMachine) stateMachine.next() // initialize the state machine.
 	return stateMachine
@@ -29,9 +29,9 @@ export function chooseStateMachine (char: string): JsonValueParser|null {
 export default class JsonDeserializer extends Duplex {
 	// we only need to store one state machine. if the provided thing is an object the object state machine will simply
 	// use other state machines to read the other stuff
-	private stateMachine: JsonValueParser|null = null
+	private stateMachine: JsonValueParser | null = null
 	private canPush = false
-	private results: JsonValue[] = []
+	protected results: JsonValue[] = []
 
 	constructor () {
 		super({ readableObjectMode: true })
@@ -62,7 +62,7 @@ export default class JsonDeserializer extends Duplex {
 	/**
 	 * Pushes results while able to.
 	 */
-	private pushResults (): void {
+	protected pushResults (): void {
 		while (this.canPush && this.results.length) {
 			this.canPush = this.push(this.results.shift())
 		}

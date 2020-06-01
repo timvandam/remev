@@ -7,7 +7,7 @@ import { JsonValue } from './JsonDeserializer'
  * EventEmitter that listens to events emitted on connected RemoteEventEmitters and can emit them respectively.
  */
 export default class RemoteEventEmitter extends EventEmitter {
-	private static EMIT = Symbol('ree_emit') // used to emit to REEs connected to this REE
+	private static EMIT = Symbol('ree:emit') // used to emit to REEs connected to this REE
 
 	private sockets = new Set<net.Socket>() // our sockets that are connected to other REEs
 	private server?: net.Server // our server that allows other REEs to connect
